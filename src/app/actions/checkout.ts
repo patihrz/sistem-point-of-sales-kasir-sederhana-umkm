@@ -56,13 +56,13 @@ export async function processCheckout(data: CheckoutRequest): Promise<CheckoutRe
 
     const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // 1. Ambil data produk terbaru dari database untuk verifikasi harga dan stok
-      const productIds = data.items.map((i) => i.productId);
+      const productIds = data.items.map((i: CheckoutItemInput) => i.productId);
       const dbProducts = await tx.product.findMany({
         where: { id: { in: productIds } },
       });
 
-      const productMap = new Map<string, (typeof dbProducts)[number]>(
-        dbProducts.map((p) => [p.id, p])
+      const productMap = new Map<string, any>(
+        dbProducts.map((p: any) => [p.id, p])
       );
 
       let subtotal = 0;
