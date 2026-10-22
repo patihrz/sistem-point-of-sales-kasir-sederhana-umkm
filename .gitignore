@@ -1,5 +1,3 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
 # dependencies
 /node_modules
 /.pnp
@@ -20,22 +18,50 @@
 # production
 /build
 
-# misc
-.DS_Store
-*.pem
+# env files — JANGAN sampai ikut ke-push
+.env
+.env.*
+!.env.example
 
-# debug
+# debug logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# misc
+*.pem
 
 # vercel
 .vercel
 
-# typescript
+# typescript build cache
 *.tsbuildinfo
 next-env.d.ts
+
+# prisma — engine binary tidak perlu di-commit
+prisma/*.db
+prisma/*.db-journal
+
+# uploaded files dari user (logo toko, dll)
+/public/uploads/*
+!/public/uploads/.gitkeep
+
+# docker volumes (jika ada di lokal)
+mysql_data/
+
+# gemini / antigravity agent files
+.gemini/
+AGENTS.md

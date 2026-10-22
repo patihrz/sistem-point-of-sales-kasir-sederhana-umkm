@@ -1,36 +1,137 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# KasirKITA — Sistem Point of Sales untuk UMKM
 
-## Getting Started
+Aplikasi kasir berbasis web yang dibuat untuk memudahkan toko dan warung kecil dalam mencatat penjualan, mengelola stok barang, dan mencetak struk. Dibangun dengan **Next.js 15**, **MySQL**, **Prisma ORM**, dan **Tailwind CSS**.
 
-First, run the development server:
+---
+
+## Yang Dibutuhkan
+
+Sebelum mulai, pastikan sudah terinstal di komputer kamu:
+
+- [Node.js](https://nodejs.org/) versi 20 ke atas
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (pastikan sudah dibuka dan berjalan)
+- [Git](https://git-scm.com/)
+
+---
+
+## Cara Instalasi
+
+### 1. Clone dan masuk ke folder proyek
+
+```bash
+git clone https://github.com/patihrz/sistem-point-of-sales-kasir-sederhana-umkm.git
+cd sistem-point-of-sales-kasir-sederhana-umkm
+```
+
+### 2. Instal dependensi
+
+```bash
+npm install
+```
+
+### 3. Buat file environment
+
+Salin file `.env.example` jadi `.env`:
+
+**Windows (PowerShell):**
+```powershell
+Copy-Item .env.example .env
+```
+
+**Linux / macOS:**
+```bash
+cp .env.example .env
+```
+
+Isi default dari `.env`:
+```env
+DATABASE_URL="mysql://root:rootpassword@localhost:3306/kasir_simpel"
+NEXTAUTH_SECRET="ganti_dengan_secret_kalian"
+NEXTAUTH_URL="http://localhost:3000"
+```
+
+### 4. Siapkan database
+
+Cukup jalankan satu perintah ini:
+
+```bash
+npm run db:setup
+```
+
+Perintah di atas akan otomatis:
+1. Menjalankan MySQL dan Adminer lewat Docker.
+2. Menunggu sampai MySQL siap dipakai.
+3. Membuat tabel-tabel yang diperlukan.
+4. Mengisi data contoh (produk, kategori, dan akun demo).
+
+### 5. Jalankan aplikasi
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Buka browser dan akses **http://localhost:3000** — kamu akan langsung masuk ke halaman login.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Akun Demo
 
-## Learn More
+Setelah setup selesai, kamu bisa langsung login pakai akun di bawah ini:
 
-To learn more about Next.js, take a look at the following resources:
+| Peran | Email | Password | Bisa akses apa? |
+|---|---|---|---|
+| **Pemilik Toko** | `owner@kasir.com` | `owner123` | Semua fitur: dashboard, produk, riwayat penjualan, pengaturan toko |
+| **Kasir** | `kasir@kasir.com` | `kasir123` | Halaman kasir untuk melayani transaksi dan cetak struk |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Di halaman login juga ada tombol cepat untuk langsung masuk tanpa perlu ketik manual.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## Perintah yang Tersedia
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Perintah | Fungsi |
+|---|---|
+| `npm run dev` | Jalankan aplikasi di mode development |
+| `npm run db:setup` | Setup lengkap: Docker + tabel + data contoh |
+| `npm run db:up` | Nyalakan container Docker (MySQL dan Adminer) |
+| `npm run db:down` | Matikan container Docker |
+| `npm run db:seed` | Isi ulang data contoh |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## Melihat Isi Database (Adminer)
+
+Kalau mau lihat langsung isi tabel di MySQL:
+
+- Buka **http://localhost:8080**
+- Sistem: MySQL
+- Server: `mysql`
+- Username: `root`
+- Password: `rootpassword`
+- Database: `kasir_simpel`
+
+---
+
+## Shortcut Keyboard di Halaman Kasir
+
+| Tombol | Fungsi |
+|---|---|
+| **F2** | Fokus ke kolom pencarian produk |
+| **F9** | Proses pembayaran |
+| **Esc** | Tutup pop-up / batal |
+
+---
+
+## Tech Stack
+
+- **Framework:** Next.js 15 (App Router, TypeScript, React 19)
+- **Database:** MySQL 8.0 (via Docker)
+- **ORM:** Prisma
+- **Styling:** Tailwind CSS
+- **Ikon:** Lucide React
+
+---
+
+## Lisensi
+
+Proyek ini open-source di bawah lisensi **MIT**. Bebas dipakai, dimodifikasi, dan dikembangkan.
