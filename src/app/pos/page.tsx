@@ -29,7 +29,7 @@ import {
   Tag,
   Barcode
 } from "lucide-react";
-import { getProducts, ProductDTO } from "@/app/actions/products";
+import { getProducts, getCategories, ProductDTO } from "@/app/actions/products";
 import { processCheckout, CheckoutResponse } from "@/app/actions/checkout";
 import { getStoreSetting, StoreSettingDTO } from "@/app/actions/settings";
 import { SessionUser, DEMO_ACCOUNTS } from "@/lib/auth";
@@ -80,13 +80,16 @@ export default function PosPage() {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // 1. Fetch data dari database
+  // 1. Fetch data dari database (Produk & Kategori Dinamis)
   const loadCatalog = async () => {
     try {
-      const data = await getProducts();
+      const [data, cats] = await Promise.all([getProducts(), getCategories()]);
       setProducts(data);
 
-      const uniqueCats = ["Semua", ...Array.from(new Set(data.map((p) => p.category)))];
+      const uniqueCats = [
+        "Semua",
+        ...Array.from(new Set([...cats.map((c) => c.name), ...data.map((p) => p.category)])),
+      ];
       setCategories(uniqueCats);
     } catch (e) {
       console.error("Gagal memuat katalog:", e);
