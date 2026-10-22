@@ -163,16 +163,14 @@ export default function PosPage() {
   }, [subtotal, discountAmount, taxAmount]);
 
   const changeAmount = useMemo(() => {
-    if (paymentMethod !== "TUNAI") return 0;
     return Math.max(0, cashGiven - finalTotal);
-  }, [cashGiven, finalTotal, paymentMethod]);
+  }, [cashGiven, finalTotal]);
 
   const isPaymentValid = useMemo(() => {
     if (cart.length === 0) return false;
-    if (paymentMethod === "TUNAI") {
-      return cashGiven >= finalTotal;
-    }
-    return true; // Non-tunai langsung valid
+    if (!paymentMethod) return false;
+    if (!cashGiven || cashGiven <= 0) return false;
+    return cashGiven >= finalTotal;
   }, [cart, paymentMethod, cashGiven, finalTotal]);
 
   // Add to cart
@@ -218,15 +216,23 @@ export default function PosPage() {
     setErrorMessage("");
   };
 
-  // Checkout Handler
+  // Checkout Handler: Wajib Memasukkan Jenis Pembayaran dan Nominal Uang Diterima
   const handleCheckout = async () => {
     if (cart.length === 0 || isSubmitting) return;
 
-    // Jika tunai tapi belum diinput, otomatis pasang uang pas
-    let currentCash = cashGiven;
-    if (paymentMethod === "TUNAI" && cashGiven < finalTotal) {
-      currentCash = finalTotal;
-      setCashGiven(finalTotal);
+    if (!paymentMethod) {
+      setErrorMessage("Silakan pilih jenis metode pembayaran terlebih dahulu.");
+      return;
+    }
+
+    if (!cashGiven || cashGiven <= 0) {
+      setErrorMessage("Wajib memasukkan nominal uang yang diterima dari pembeli.");
+      return;
+    }
+
+    if (cashGiven < finalTotal) {
+      setErrorMessage(`Nominal uang yang diterima kurang ${formatRupiah(finalTotal - cashGiven)}.`);
+      return;
     }
 
     setIsSubmitting(true);
@@ -236,7 +242,7 @@ export default function PosPage() {
       const res = await processCheckout({
         items: cart.map((i) => ({ productId: i.id, quantity: i.quantity })),
         paymentMethod,
-        paidAmount: paymentMethod === "TUNAI" ? currentCash : finalTotal,
+        paidAmount: cashGiven,
         discountPercent,
         userId: currentUser.id,
       });
@@ -816,11 +822,16 @@ export default function PosPage() {
               </div>
             </div>
 
-            {/* Payment Method Selector */}
+            {/* Payment Method Selector (Wajib Pilih Jenis Pembayaran) */}
             <div className="space-y-1.5 pt-1">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">
-                Metode Pembayaran
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wide">
+                  1. Jenis Pembayaran <span className="text-rose-600">*</span>
+                </label>
+                <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100/70 px-2 py-0.5 rounded border border-emerald-300">
+                  {paymentMethod}
+                </span>
+              </div>
               <div className="grid grid-cols-4 gap-1.5">
                 {[
                   { id: "TUNAI", label: "Tunai", icon: Banknote },
@@ -830,81 +841,107 @@ export default function PosPage() {
                 ].map(({ id, label, icon: Icon }) => (
                   <button
                     key={id}
+                    type="button"
                     onClick={() => setPaymentMethod(id as any)}
-                    className={`flex flex-col items-center justify-center py-2 px-1 rounded-md border text-center transition-all cursor-pointer ${
+                    className={`flex flex-col items-center justify-center py-2 px-1 rounded-lg border text-center transition-all cursor-pointer ${
                       paymentMethod === id
-                        ? "border-emerald-600 bg-emerald-50 text-emerald-800 font-bold shadow-xs"
+                        ? "border-emerald-600 bg-emerald-50 text-emerald-900 font-bold shadow-xs ring-1 ring-emerald-600/30"
                         : "border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
                     }`}
                   >
-                    <Icon className="w-3.5 h-3.5 mb-1" />
+                    <Icon className="w-3.5 h-3.5 mb-1 text-emerald-700" />
                     <span className="text-[10px]">{label}</span>
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Cash Input & Quick Cash Buttons */}
-            {paymentMethod === "TUNAI" && (
-              <div className="space-y-2 pt-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-600 font-semibold">Uang Diterima:</span>
-                  <input
-                    type="number"
-                    value={cashGiven || ""}
-                    onChange={(e) => setCashGiven(Number(e.target.value))}
-                    placeholder="0"
-                    className="w-32 text-right px-2.5 py-1 bg-white border border-slate-300 rounded font-mono text-xs font-bold text-slate-900 focus:ring-2 focus:ring-emerald-600 focus:outline-none"
-                  />
-                </div>
+            {/* Input Nominal Uang Diterima (Wajib Untuk SEMUA Metode Pembayaran) */}
+            <div className="space-y-2 pt-2 border-t border-slate-200">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wide">
+                  2. Nominal Uang Diterima <span className="text-rose-600">*</span>
+                </label>
+                <span className="text-[10px] text-slate-500">
+                  via <strong className="text-slate-800">{paymentMethod}</strong>
+                </span>
+              </div>
 
-                <div className="flex items-center gap-1">
+              <div className="flex items-center justify-between text-xs bg-white border border-slate-300 rounded-lg p-2 focus-within:ring-2 focus-within:ring-emerald-600 focus-within:border-emerald-600 shadow-2xs">
+                <span className="text-slate-400 font-mono font-bold pl-1 text-sm">Rp</span>
+                <input
+                  type="number"
+                  value={cashGiven || ""}
+                  onChange={(e) => setCashGiven(Math.max(0, Number(e.target.value)))}
+                  placeholder="0"
+                  className="w-full text-right px-2 py-0.5 bg-transparent font-mono text-base font-bold text-slate-900 focus:outline-none"
+                />
+              </div>
+
+              {/* Quick Money Buttons */}
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setCashGiven(finalTotal)}
+                  className="flex-1 py-1.5 text-[10px] bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-md font-bold cursor-pointer transition-colors shadow-2xs"
+                >
+                  Uang Pas
+                </button>
+                {[10000, 20000, 50000, 100000].map((amt) => (
                   <button
-                    onClick={() => setCashGiven(finalTotal)}
-                    className="flex-1 py-1 text-[10px] bg-slate-200 hover:bg-slate-300 text-slate-800 rounded font-bold cursor-pointer"
+                    key={amt}
+                    type="button"
+                    onClick={() => setCashGiven(amt >= finalTotal ? amt : finalTotal + amt)}
+                    className="flex-1 py-1.5 text-[10px] bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-md font-bold cursor-pointer transition-colors"
                   >
-                    Uang Pas
+                    {amt >= 1000 ? `${amt / 1000}k` : amt}
                   </button>
-                  {[50000, 100000].map((amt) => (
-                    <button
-                      key={amt}
-                      onClick={() => setCashGiven(amt)}
-                      className="flex-1 py-1 text-[10px] bg-slate-200 hover:bg-slate-300 text-slate-800 rounded font-bold cursor-pointer"
-                    >
-                      {amt / 1000}k
-                    </button>
-                  ))}
-                </div>
+                ))}
+              </div>
 
-                {cashGiven > 0 && (
-                  <div className="flex justify-between items-center text-xs pt-1 border-t border-slate-200">
-                    <span className="font-semibold text-slate-600">Kembalian:</span>
-                    <span
-                      className={`font-mono font-bold ${
-                        cashGiven < finalTotal ? "text-rose-600" : "text-emerald-700"
-                      }`}
-                    >
-                      {cashGiven < finalTotal
-                        ? `Kurang ${formatRupiah(finalTotal - cashGiven)}`
-                        : formatRupiah(changeAmount)}
-                    </span>
-                  </div>
+              {/* Status Kembalian / Kurang Bayar Realtime */}
+              <div className="flex justify-between items-center text-xs pt-1 border-t border-slate-200">
+                <span className="font-semibold text-slate-600">Status Pembayaran:</span>
+                {!cashGiven || cashGiven === 0 ? (
+                  <span className="text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                    Wajib masukkan uang diterima
+                  </span>
+                ) : cashGiven < finalTotal ? (
+                  <span className="font-mono font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                    Kurang {formatRupiah(finalTotal - cashGiven)}
+                  </span>
+                ) : (
+                  <span className="font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                    {cashGiven === finalTotal
+                      ? "Uang Pas (Kembalian Rp 0)"
+                      : `Kembalian: ${formatRupiah(changeAmount)}`}
+                  </span>
                 )}
               </div>
-            )}
+            </div>
 
             {/* Main Action Checkout Button */}
             <button
               onClick={handleCheckout}
-              disabled={cart.length === 0 || isSubmitting}
+              disabled={!isPaymentValid || isSubmitting}
               className={`w-full py-2.5 px-4 rounded-lg font-bold text-xs uppercase tracking-wider text-white flex items-center justify-center gap-2 transition-all ${
-                cart.length > 0 && !isSubmitting
+                isPaymentValid && !isSubmitting
                   ? "bg-emerald-600 hover:bg-emerald-700 shadow-xs cursor-pointer active:scale-[0.99]"
                   : "bg-slate-300 text-slate-500 cursor-not-allowed"
               }`}
             >
-              <span>{isSubmitting ? "MEMPROSES TRANSAKSI..." : "PROSES BAYAR"}</span>
-              <kbd className="px-1.5 py-0.5 bg-emerald-800/60 text-white rounded text-[10px] font-mono font-bold">
+              <span>
+                {isSubmitting
+                  ? "MEMPROSES TRANSAKSI..."
+                  : cart.length === 0
+                  ? "KERANJANG KOSONG"
+                  : !cashGiven || cashGiven === 0
+                  ? "MASUKKAN NOMINAL UANG"
+                  : cashGiven < finalTotal
+                  ? `UANG KURANG ${formatRupiah(finalTotal - cashGiven)}`
+                  : `PROSES BAYAR (${paymentMethod})`}
+              </span>
+              <kbd className="px-1.5 py-0.5 bg-black/20 text-white rounded text-[10px] font-mono font-bold">
                 F9
               </kbd>
               <ArrowRight className="w-4 h-4 ml-0.5" />
@@ -1176,12 +1213,12 @@ export default function PosPage() {
 
               <div className="space-y-1 text-[11px]">
                 <div className="flex justify-between">
-                  <span>Metode:</span>
+                  <span>Jenis Pembayaran:</span>
                   <span className="font-bold">{completedTransaction.paymentMethod}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Bayar:</span>
-                  <span>{formatRupiah(completedTransaction.paidAmount)}</span>
+                  <span>Nominal Diterima:</span>
+                  <span className="font-bold">{formatRupiah(completedTransaction.paidAmount)}</span>
                 </div>
                 <div className="flex justify-between font-bold text-emerald-800">
                   <span>Kembalian:</span>

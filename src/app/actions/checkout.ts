@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { PaymentMethod, TransactionStatus } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 export interface CheckoutItemInput {
   productId: string;
@@ -46,14 +46,24 @@ export async function processCheckout(data: CheckoutRequest): Promise<CheckoutRe
       return { success: false, message: "Keranjang belanja kosong. Pilih produk terlebih dahulu." };
     }
 
-    const result = await prisma.$transaction(async (tx) => {
+    if (!data.paymentMethod) {
+      return { success: false, message: "Wajib memilih jenis metode pembayaran (Tunai, QRIS, Debit, atau Transfer)." };
+    }
+
+    if (data.paidAmount === undefined || data.paidAmount === null || data.paidAmount <= 0) {
+      return { success: false, message: "Wajib memasukkan nominal uang yang diterima dari pembeli." };
+    }
+
+    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // 1. Ambil data produk terbaru dari database untuk verifikasi harga dan stok
       const productIds = data.items.map((i) => i.productId);
       const dbProducts = await tx.product.findMany({
         where: { id: { in: productIds } },
       });
 
-      const productMap = new Map(dbProducts.map((p) => [p.id, p]));
+      const productMap = new Map<string, (typeof dbProducts)[number]>(
+        dbProducts.map((p) => [p.id, p])
+      );
 
       let subtotal = 0;
       const orderItemsToCreate: {
@@ -104,21 +114,18 @@ export async function processCheckout(data: CheckoutRequest): Promise<CheckoutRe
       const discountRate = data.discountPercent || 0;
       const discount = Math.round((subtotal * discountRate) / 100);
       const afterDiscount = subtotal - discount;
-      const tax = Math.round(afterDiscount * 0.1); // Pajak Resto 10%
+      const tax = Math.round(afterDiscount * 0.1); // Pajak 10%
       const finalAmount = Math.max(0, afterDiscount + tax);
 
-      let paidAmount = data.paidAmount;
-      if (data.paymentMethod !== "TUNAI") {
-        paidAmount = finalAmount; // Pembayaran non-tunai lunas pas
-      }
+      const paidAmount = Number(data.paidAmount);
 
       if (paidAmount < finalAmount) {
         throw new Error(
-          `Uang pembayaran kurang. Total tagihan Rp ${finalAmount.toLocaleString("id-ID")}, dibayar Rp ${paidAmount.toLocaleString("id-ID")}`
+          `Nominal uang yang diterima kurang. Total tagihan Rp ${finalAmount.toLocaleString("id-ID")}, uang diterima Rp ${paidAmount.toLocaleString("id-ID")}`
         );
       }
 
-      const changeAmount = paidAmount - finalAmount;
+      const changeAmount = Math.max(0, paidAmount - finalAmount);
 
       // 4. Generate Nomor Invoice (Format: INV-YYYYMMDD-RANDOM)
       const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
@@ -126,10 +133,10 @@ export async function processCheckout(data: CheckoutRequest): Promise<CheckoutRe
       const invoiceNumber = `INV-${dateStr}-${randomSuffix}`;
 
       // Mapping Enum PaymentMethod
-      let mappedMethod: PaymentMethod = PaymentMethod.TUNAI;
-      if (data.paymentMethod === "QRIS") mappedMethod = PaymentMethod.QRIS;
-      if (data.paymentMethod === "DEBIT") mappedMethod = PaymentMethod.DEBIT;
-      if (data.paymentMethod === "TRANSFER") mappedMethod = PaymentMethod.TRANSFER;
+      let mappedMethod: "TUNAI" | "QRIS" | "DEBIT" | "TRANSFER" = "TUNAI";
+      if (data.paymentMethod === "QRIS") mappedMethod = "QRIS";
+      if (data.paymentMethod === "DEBIT") mappedMethod = "DEBIT";
+      if (data.paymentMethod === "TRANSFER") mappedMethod = "TRANSFER";
 
       // 5. Validasi userId terhadap database agar Foreign Key constraint tidak gagal
       let validUserId: string | null = null;
@@ -165,7 +172,7 @@ export async function processCheckout(data: CheckoutRequest): Promise<CheckoutRe
           paidAmount,
           changeAmount,
           paymentMethod: mappedMethod,
-          status: TransactionStatus.COMPLETED,
+          status: "COMPLETED",
           notes: data.notes || null,
           userId: validUserId,
           items: {
@@ -194,7 +201,7 @@ export async function processCheckout(data: CheckoutRequest): Promise<CheckoutRe
         changeAmount,
         paymentMethod: createdTransaction.paymentMethod,
         createdAt: createdTransaction.createdAt,
-        items: createdTransaction.items.map((i) => ({
+        items: createdTransaction.items.map((i: (typeof createdTransaction.items)[number]) => ({
           name: i.productName,
           quantity: i.quantity,
           price: Number(i.priceAtPurchase),

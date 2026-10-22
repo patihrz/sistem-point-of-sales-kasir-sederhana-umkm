@@ -33,7 +33,7 @@ export async function getProducts(): Promise<ProductDTO[]> {
       orderBy: { createdAt: "desc" },
     });
 
-    return products.map((p) => ({
+    return products.map((p: any) => ({
       id: p.id,
       name: p.name,
       sku: p.sku,
@@ -64,11 +64,11 @@ export async function getCategories(): Promise<CategoryDTO[]> {
       },
     });
 
-    return categories.map((c) => ({
+    return categories.map((c: any) => ({
       id: c.id,
       name: c.name,
       slug: c.slug,
-      productCount: c._count.products,
+      productCount: c._count?.products ?? 0,
     }));
   } catch (error) {
     console.warn("Database offline, fallback categories:", error);
