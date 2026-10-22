@@ -12,6 +12,14 @@ const lato = Lato({
 export const metadata: Metadata = {
   title: "KasirKITA - Point of Sale Modern untuk UMKM",
   description: "Aplikasi kasir berbasis web yang cepat, responsif, dan mudah digunakan untuk UMKM Indonesia.",
+  icons: {
+    icon: [
+      { url: "/KasirKITA.png" },
+      { url: "/kaskita.png" },
+    ],
+    shortcut: "/KasirKITA.png",
+    apple: "/KasirKITA.png",
+  },
 };
 
 export default function RootLayout({

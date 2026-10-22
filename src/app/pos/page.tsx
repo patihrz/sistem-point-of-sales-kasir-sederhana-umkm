@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Search,
   ShoppingCart,
@@ -462,8 +463,15 @@ export default function PosPage() {
       {/* Top Bar Header */}
       <header className="h-14 bg-white border-b border-slate-200 px-6 flex items-center justify-between shrink-0 print:hidden">
         <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-lg bg-emerald-600 flex items-center justify-center text-white font-bold text-sm tracking-wider">
-            KK
+          <div className="h-8 w-8 rounded-lg bg-white border border-slate-200 p-0.5 flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
+            <Image
+              src="/KasirKITA.png"
+              alt="KasirKITA"
+              width={30}
+              height={30}
+              className="object-contain"
+              priority
+            />
           </div>
           <div>
             <h1 className="text-sm font-bold text-slate-900 leading-none">KasirKITA POS</h1>
