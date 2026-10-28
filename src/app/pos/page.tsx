@@ -1612,6 +1612,15 @@ export default function PosPage() {
             <div id="receipt-paper" className="p-6 font-mono text-xs text-slate-900 space-y-3 bg-white print:p-0 print:text-black">
               {/* Toko Header */}
               <div className="text-center space-y-0.5 border-b border-dashed border-slate-400 pb-3">
+                {storeSetting.logoUrl && (
+                  <div className="flex justify-center mb-1.5">
+                    <img
+                      src={storeSetting.logoUrl}
+                      alt="Logo Toko"
+                      className="max-h-12 max-w-[120px] object-contain"
+                    />
+                  </div>
+                )}
                 <p className="font-black text-sm tracking-tight uppercase text-slate-950">
                   {storeSetting.storeName}
                 </p>

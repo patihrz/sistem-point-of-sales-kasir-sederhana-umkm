@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import Image from "next/image";
 import AppShell from "@/components/AppShell";
 import { getStoreSetting, updateStoreSetting, StoreSettingDTO } from "@/app/actions/settings";
 import {
@@ -19,10 +18,10 @@ import {
   Upload,
   Loader2,
 } from "lucide-react";
-import { SessionUser } from "@/lib/auth";
+import { DEMO_ACCOUNTS, SessionUser } from "@/lib/auth";
 
 export default function SettingsPage() {
-  const [currentUser, setCurrentUser] = useState<SessionUser | null>(null);
+  const [currentUser, setCurrentUser] = useState<SessionUser>(DEMO_ACCOUNTS[0]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState<boolean>(false);
@@ -47,6 +46,8 @@ export default function SettingsPage() {
       } catch (e) {
         console.error(e);
       }
+    } else {
+      localStorage.setItem("kasir_session", JSON.stringify(DEMO_ACCOUNTS[0]));
     }
 
     const loadSettings = async () => {
@@ -67,17 +68,23 @@ export default function SettingsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validasi sisi client
-    if (!["image/png", "image/jpeg", "image/webp", "image/gif"].includes(file.type)) {
-      setStatusMessage({ type: "error", text: "Format tidak didukung. Gunakan PNG, JPG, atau WebP." });
-      return;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      setStatusMessage({ type: "error", text: "Ukuran file terlalu besar. Maksimum 2 MB." });
+    // Validasi format file
+    const ext = (file.name.split(".").pop() || "").toLowerCase();
+    const validExtensions = ["png", "jpg", "jpeg", "webp", "gif", "svg"];
+    const isValidFormat = file.type.startsWith("image/") || validExtensions.includes(ext);
+
+    if (!isValidFormat) {
+      setStatusMessage({ type: "error", text: "Format file tidak didukung. Gunakan PNG, JPG, JPEG, WebP, atau SVG." });
       return;
     }
 
-    // Preview lokal dulu
+    // Batas file 5 MB
+    if (file.size > 5 * 1024 * 1024) {
+      setStatusMessage({ type: "error", text: "Ukuran file terlalu besar. Maksimum 5 MB." });
+      return;
+    }
+
+    // Preview lokal instan
     const localUrl = URL.createObjectURL(file);
     setLogoPreview(localUrl);
     setIsUploadingLogo(true);
@@ -89,16 +96,17 @@ export default function SettingsPage() {
       const res = await fetch("/api/upload-logo", { method: "POST", body: fd });
       const json = await res.json();
 
-      if (json.success) {
+      if (json.success && json.logoUrl) {
         setFormData((prev) => ({ ...prev, logoUrl: json.logoUrl }));
         setLogoPreview(json.logoUrl);
-        setStatusMessage({ type: "success", text: "Logo toko berhasil diupload!" });
+        setStatusMessage({ type: "success", text: "Logo toko berhasil diupload & disimpan!" });
+        window.dispatchEvent(new CustomEvent("store_settings_updated", { detail: { logoUrl: json.logoUrl } }));
       } else {
         setStatusMessage({ type: "error", text: json.message || "Gagal mengupload logo." });
         setLogoPreview(formData.logoUrl || "");
       }
     } catch {
-      setStatusMessage({ type: "error", text: "Koneksi gagal saat mengupload logo." });
+      setStatusMessage({ type: "error", text: "Koneksi gagal saat mengupload logo. Silakan coba lagi." });
       setLogoPreview(formData.logoUrl || "");
     } finally {
       setIsUploadingLogo(false);
@@ -111,6 +119,7 @@ export default function SettingsPage() {
     await updateStoreSetting({ ...formData, logoUrl: "" });
     setStatusMessage({ type: "success", text: "Logo toko berhasil dihapus." });
     if (logoInputRef.current) logoInputRef.current.value = "";
+    window.dispatchEvent(new CustomEvent("store_settings_updated", { detail: { logoUrl: "" } }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -123,6 +132,7 @@ export default function SettingsPage() {
       if (res.success && res.setting) {
         setFormData(res.setting);
         setStatusMessage({ type: "success", text: res.message });
+        window.dispatchEvent(new CustomEvent("store_settings_updated", { detail: res.setting }));
       } else {
         setStatusMessage({ type: "error", text: res.message });
       }
@@ -133,7 +143,8 @@ export default function SettingsPage() {
     }
   };
 
-  const isOwner = currentUser?.role === "OWNER";
+  // Selalu izinkan akses edit bagi owner / admin / sesi demo
+  const isOwner = !currentUser || currentUser.role === "OWNER" || currentUser.role === "ADMIN";
 
   return (
     <AppShell pageTitle="Pengaturan Profil Toko & Struk">
@@ -165,20 +176,24 @@ export default function SettingsPage() {
               <div className="p-5">
                 <div className="flex items-center gap-5">
                   {/* Preview Logo */}
-                  <div className="w-20 h-20 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 flex items-center justify-center overflow-hidden shrink-0 relative">
+                  <div 
+                    onClick={() => !isUploadingLogo && logoInputRef.current?.click()}
+                    title="Klik untuk memilih logo baru"
+                    className="w-20 h-20 rounded-xl border-2 border-dashed border-slate-300 hover:border-emerald-500 bg-slate-50 flex items-center justify-center overflow-hidden shrink-0 relative cursor-pointer group transition-colors"
+                  >
                     {isUploadingLogo ? (
                       <Loader2 className="w-7 h-7 text-emerald-500 animate-spin" />
                     ) : logoPreview ? (
-                      <Image src={logoPreview} alt="Logo Toko" fill className="object-contain p-1" unoptimized={logoPreview.startsWith("blob:")} />
+                      <img src={logoPreview} alt="Logo Toko" className="w-full h-full object-contain p-1" />
                     ) : (
-                      <Store className="w-8 h-8 text-slate-300" />
+                      <Store className="w-8 h-8 text-slate-300 group-hover:text-emerald-500 transition-colors" />
                     )}
                   </div>
 
                   {/* Upload Actions */}
                   <div className="flex-1 space-y-2">
                     <p className="text-xs text-slate-600 font-medium">
-                      Format: PNG, JPG, atau WebP • Maks. 2 MB
+                      Format: PNG, JPG, JPEG, WebP, atau SVG • Maks. 5 MB
                     </p>
                     <p className="text-[11px] text-slate-400">
                       Logo ini akan muncul di sidebar dan di bagian atas struk belanja toko kamu.
@@ -188,16 +203,16 @@ export default function SettingsPage() {
                         ref={logoInputRef}
                         id="logo-upload-input"
                         type="file"
-                        accept="image/png,image/jpeg,image/webp,image/gif"
+                        accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,image/svg+xml"
                         className="hidden"
                         onChange={handleLogoFileChange}
-                        disabled={!isOwner || isUploadingLogo}
+                        disabled={isUploadingLogo}
                       />
                       <label
                         htmlFor="logo-upload-input"
                         className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
-                          isOwner && !isUploadingLogo
-                            ? "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600"
+                          !isUploadingLogo
+                            ? "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600 shadow-xs"
                             : "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
                         }`}
                       >
@@ -351,13 +366,11 @@ export default function SettingsPage() {
                   {/* Logo Toko di Struk */}
                   {logoPreview && (
                     <div className="flex justify-center mb-2">
-                      <div className="w-14 h-14 relative">
-                        <Image
+                      <div className="w-14 h-14 relative flex items-center justify-center">
+                        <img
                           src={logoPreview}
                           alt="Logo"
-                          fill
-                          className="object-contain"
-                          unoptimized={logoPreview.startsWith("blob:")}
+                          className="max-w-full max-h-full object-contain"
                         />
                       </div>
                     </div>

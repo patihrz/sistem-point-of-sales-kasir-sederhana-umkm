@@ -1,6 +1,7 @@
 import Link from "next/link";
 import AppShell from "@/components/AppShell";
 import { getDashboardStats } from "@/app/actions/dashboard";
+import { getStoreSetting } from "@/app/actions/settings";
 import {
   TrendingUp,
   ShoppingBag,
@@ -11,12 +12,18 @@ import {
   ArrowRight,
   Receipt,
   Plus,
+  Settings,
+  MapPin,
+  Phone,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const stats = await getDashboardStats();
+  const [stats, storeSetting] = await Promise.all([
+    getDashboardStats(),
+    getStoreSetting(),
+  ]);
 
   const formatRupiah = (val: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -107,6 +114,98 @@ export default async function DashboardPage() {
               {stats.totalProducts} <span className="text-sm font-normal text-slate-500">item</span>
             </p>
             <p className="text-[11px] text-slate-400 mt-1">Produk yang bisa dijual sekarang</p>
+          </div>
+        </div>
+
+        {/* Card: Identitas Toko & Informasi Struk */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+          <div className="p-4 sm:p-5 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                <Store className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">Identitas Toko & Informasi Struk</h3>
+                <p className="text-xs text-slate-500">
+                  Data profil usaha yang dicetak otomatis pada header & footer struk kasir
+                </p>
+              </div>
+            </div>
+
+            <Link
+              href="/settings"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition-all shadow-xs shrink-0"
+            >
+              <Settings className="w-3.5 h-3.5" />
+              <span>Kelola Profil & Struk</span>
+            </Link>
+          </div>
+
+          <div className="p-5 grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
+            {/* Logo Preview & Badge */}
+            <div className="md:col-span-3 flex flex-col items-center sm:items-start text-center sm:text-left gap-3 border-b md:border-b-0 md:border-r border-slate-100 pb-4 md:pb-0 md:pr-4">
+              <div className="w-20 h-20 rounded-xl border border-slate-200 bg-slate-50 p-2 flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
+                {storeSetting.logoUrl ? (
+                  <img
+                    src={storeSetting.logoUrl}
+                    alt={storeSetting.storeName}
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <Store className="w-8 h-8 text-slate-300" />
+                )}
+              </div>
+              <div>
+                {storeSetting.logoUrl ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    Logo Aktif di Struk
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full">
+                    Belum Ada Logo
+                  </span>
+                )}
+                <Link
+                  href="/settings"
+                  className="block text-[11px] text-emerald-600 hover:underline font-semibold mt-1"
+                >
+                  {storeSetting.logoUrl ? "Ganti Logo Toko" : "+ Upload Logo Toko"}
+                </Link>
+              </div>
+            </div>
+
+            {/* Detail Identitas */}
+            <div className="md:col-span-9 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+              <div className="space-y-1">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Nama Toko</span>
+                <p className="font-bold text-slate-900 text-sm">{storeSetting.storeName || "Belum diatur"}</p>
+              </div>
+
+              <div className="space-y-1">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Kontak / Telepon</span>
+                <p className="text-slate-700 font-mono flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <span>{storeSetting.phoneNumber || "-"}</span>
+                </p>
+              </div>
+
+              <div className="space-y-1 sm:col-span-2 lg:col-span-1">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Catatan Kaki Struk</span>
+                <p className="text-slate-700 italic flex items-center gap-1.5">
+                  <Receipt className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <span className="line-clamp-2">{storeSetting.receiptFooter || "Terima kasih atas kunjungan Anda!"}</span>
+                </p>
+              </div>
+
+              <div className="space-y-1 sm:col-span-2 lg:col-span-3 pt-2 border-t border-slate-100">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Alamat Usaha</span>
+                <p className="text-slate-600 flex items-start gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                  <span>{storeSetting.address || "Alamat belum diisi"}</span>
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 

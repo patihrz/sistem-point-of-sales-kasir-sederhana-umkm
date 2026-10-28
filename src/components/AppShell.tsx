@@ -58,12 +58,25 @@ export default function AppShell({ children, pageTitle }: AppShellProps) {
     const interval = setInterval(updateTime, 30000);
 
     // Ambil nama toko & logo dari DB
-    getStoreSetting().then((s) => {
-      setStoreName(s.storeName);
-      setStoreLogoUrl(s.logoUrl || "");
-    }).catch(() => {});
+    const loadSettings = () => {
+      getStoreSetting().then((s) => {
+        setStoreName(s.storeName);
+        setStoreLogoUrl(s.logoUrl || "");
+      }).catch(() => {});
+    };
+    loadSettings();
 
-    return () => clearInterval(interval);
+    const handleSettingsUpdate = (e: any) => {
+      if (e.detail?.storeName) setStoreName(e.detail.storeName);
+      if (e.detail?.logoUrl !== undefined) setStoreLogoUrl(e.detail.logoUrl);
+      loadSettings();
+    };
+    window.addEventListener("store_settings_updated", handleSettingsUpdate);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("store_settings_updated", handleSettingsUpdate);
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -135,13 +148,14 @@ export default function AppShell({ children, pageTitle }: AppShellProps) {
         {/* Store Identity: Logo & Nama Toko */}
         <div className="px-4 py-3 border-b border-slate-800 flex items-center gap-3">
           {storeLogoUrl ? (
-            <div className="w-9 h-9 rounded-lg overflow-hidden shrink-0 border border-slate-700 bg-slate-800">
-              <Image
+            <div className="w-9 h-9 rounded-lg overflow-hidden shrink-0 border border-slate-700 bg-slate-800 flex items-center justify-center">
+              <img
                 src={storeLogoUrl}
                 alt={storeName}
-                width={36}
-                height={36}
-                className="object-cover w-full h-full"
+                className="w-full h-full object-contain p-0.5"
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = "none";
+                }}
               />
             </div>
           ) : (
