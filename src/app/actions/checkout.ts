@@ -53,7 +53,6 @@ export async function processCheckout(data: CheckoutRequest): Promise<CheckoutRe
     if (data.paidAmount === undefined || data.paidAmount === null || data.paidAmount <= 0) {
       return { success: false, message: "Wajib memasukkan nominal uang yang diterima dari pembeli." };
     }
-
     const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // 1. Ambil data produk terbaru dari database untuk verifikasi harga dan stok
       const productIds = data.items.map((i: CheckoutItemInput) => i.productId);
